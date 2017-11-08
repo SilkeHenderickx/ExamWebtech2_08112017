@@ -21,9 +21,9 @@ angular.module('movieApp', ['ngRoute'])
     		var COUCHDB = '../../' + actor;
     		
     		actorCouchdbSrv.getCouchdbData(BY_ACTOR, actor).then(function(data){
-    			
+    			console.log('CouchDB view with key=actor')
     			console.log(data);
-    			if(data.data.total_rows == 0){
+    			if(data.data.rows.length == 0){
     				console.log("actor does not yet exist");
     				actorIMDBSrv.getIMDBData(IMDB, actor).then(function(data){
     	    			console.log(data);
@@ -31,14 +31,14 @@ angular.module('movieApp', ['ngRoute'])
     	    			var movies = [];
     	    			
     	    			var htmlString = '<ul>';
-    	    			for (var i = 0; i < data.length; i++) {
-							movies.push(data[i].title);
-							htmlString += '<li>' + data[i].title + '</li>';
+    	    			for (var i = 0; i < data.filmography.actor.length; i++) {
+							movies.push(data.filmography.actor[i].title);
+							htmlString += '<li>' + data.filmography.actor[i].title + '</li>';
 						}
     	    			htmlString += '</ul>';
     	    			var doc = {};
     	        		
-    	        		doc.name = actor;
+    	        		doc.name = data.title;
     	        		doc.movies = movies;
     	        		doc.type = 'actor';
     	    			
@@ -53,6 +53,8 @@ angular.module('movieApp', ['ngRoute'])
     	    		})
     				}
     			else {
+    				console.log('actor exists in couchDB');
+    				
     				var htmlString = '<ul>';
 	    			for (var i = 0; i < data.data.rows[0].value.length; i++) {
 						
@@ -63,7 +65,6 @@ angular.module('movieApp', ['ngRoute'])
 				}
     			
     			});
-    		
     	})
     })
     .service('actorIMDBSrv', function($http, $q){
@@ -72,11 +73,15 @@ angular.module('movieApp', ['ngRoute'])
     	
     	this.getIMDBData = function(url, actor){
     		var url = url + actor;
-    		
-    		
+
     		$http.get(url)
     		.then(function(data){
-    			q.resolve(data.data[0].filmography.actor);
+    			if(data.data !== null){
+    			q.resolve(data.data[0]);
+    			}
+    			else{
+    				alert("The name you entered is not an actor.");
+    			}
     		}, function error(err){
     			q.reject(err);
     			console.log(err);
@@ -87,13 +92,10 @@ angular.module('movieApp', ['ngRoute'])
     .service('actorCouchdbSrv', function($http, $q){
     	
     	var q = $q.defer();
-    	
-    	
-    	
+
     	this.getCouchdbData = function(url, actor){
     		var url = url + '?key=%22' + actor + '%22';
-    		
-    		
+
     		console.log(url);
     		$http.get(url)
     			.then(function(data){
@@ -106,14 +108,11 @@ angular.module('movieApp', ['ngRoute'])
     	};
     })
     .service('putCouchdbSrv', function($http, $q){
+    	
     	var q = $q.defer();
-    	
-    	
-    	
+
     	this.putCouchdbData = function(url, json){
-    		
-    		
-    		
+
     		console.log(url);
     		$http.put(url, json)
     			.then(function(data){
